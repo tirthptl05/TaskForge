@@ -1,0 +1,3 @@
+from app.queue.simple_queue import SimpleQueue
+
+task_queue = SimpleQueue()
