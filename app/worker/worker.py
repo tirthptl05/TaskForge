@@ -1,5 +1,6 @@
-from app.core.registry import task_queue
+from app.core.registry import task_queue, dead_letter_queue, metrics
 from app.models.task import Task, TaskStatus
+from app.handlers.registry import TASK_HANDLERS
 import time
 
 
@@ -15,10 +16,16 @@ def consume_task() -> Task | None:
     print(task)
 
     try:
-        if task.type == "fail":
-            raise Exception("Simulated task failure")
+        
+        handler = TASK_HANDLERS.get(task.type)
+
+        if not handler:
+            raise Exception(f"No handler found for task type: {task.type}")
+
+        handler(task)
 
         task.status = TaskStatus.DONE
+        metrics.task_processed()
         print("Worker: Task completed")
 
     except Exception as e:
@@ -27,11 +34,14 @@ def consume_task() -> Task | None:
         if task.retries > 0:
             task.retries -= 1
             task.status = TaskStatus.PENDING
+            metrics.task_retried()
             print(f"Worker: Retrying task, retries left = {task.retries}")
             task_queue.enqueue(task)
         else:
             task.status = TaskStatus.FAILED
-            print("Worker: Task discarded, no retries left")
+            metrics.task_failed()
+            dead_letter_queue.enqueue(task)
+            print("Worker: Task moved to Dead Letter Queue")
 
     return task
 
@@ -42,3 +52,5 @@ def start_worker():
     while True:
         consume_task()
         time.sleep(2)
+
+
