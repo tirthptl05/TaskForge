@@ -1,5 +1,6 @@
 from app.core.registry import task_queue
 from app.models.task import Task, TaskStatus
+import time
 
 
 def consume_task() -> Task | None:
@@ -33,3 +34,11 @@ def consume_task() -> Task | None:
             print("Worker: Task discarded, no retries left")
 
     return task
+
+
+def start_worker():
+    print("Worker started. Waiting for tasks...")
+
+    while True:
+        consume_task()
+        time.sleep(2)
