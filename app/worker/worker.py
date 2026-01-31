@@ -51,6 +51,6 @@ def start_worker():
 
     while True:
         consume_task()
-        time.sleep(2)
+    
 
 
