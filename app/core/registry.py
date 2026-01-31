@@ -1,5 +1,7 @@
-from app.queue.simple_queue import SimpleQueue
+from app.queue.redis_queue import RedisQueue
+from app.core.metrics import Metrics
 
-task_queue = SimpleQueue()
+task_queue = RedisQueue("taskforge:main_queue")
+dead_letter_queue = RedisQueue("taskforge:dead_letter_queue")
 
-dead_letter_queue = SimpleQueue()
+metrics = Metrics()
