@@ -9,7 +9,8 @@ class TaskStatus(str, Enum):
     FAILED = "FAILED"
 
 class Task(BaseModel):
+    task_id: str
     type: str = Field(..., description='Type of task to execute')
     payload: Dict[str,Any] = Field(..., description='Task-specific data')
-    retries: int = Field(..., ge=0, description='Number of retry attempts')
+    retries_left: int = Field(..., ge=0, description='Number of retry attempts')
     status: TaskStatus = TaskStatus.PENDING
