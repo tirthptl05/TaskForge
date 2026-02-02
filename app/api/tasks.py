@@ -7,7 +7,7 @@ router = APIRouter()
 
 @router.get("/tasks/{task_id}")
 def get_task_status(task_id: str):
-    task = get_task(redis, task_id)
+    task = get_task(task_id)
 
     if task is None:
         raise HTTPException(

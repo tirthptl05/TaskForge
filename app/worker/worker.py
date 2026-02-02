@@ -1,20 +1,26 @@
-from app.core.registry import task_queue, dead_letter_queue, metrics
+from app.core.registry import task_queue, dead_letter_queue, metrics, retry_queue
 from app.models.task import Task, TaskStatus
 from app.handlers.handler_registry import TASK_HANDLERS
-from app.core.redis_client import get_redis_client
 from app.core.task_store import update_task
+from app.core.task_logger import log_event
 import time
 
-# ✅ create redis client ONCE at module level
-redis_client = get_redis_client()
+
+def pull_retry_tasks():
+    tasks = retry_queue.get_due_tasks()
+
+    for task in tasks:
+        log_event(task.task_id, "Retry delay elapsed, re-queuing task")
+        task_queue.enqueue(task)
 
 
 def consume_task() -> Task | None:
     task = task_queue.dequeue()
 
     if task is None:
-        print("Worker: No tasks available")
         return None
+
+    log_event(task.task_id, "Task picked by worker")
 
     task.status = TaskStatus.PROCESSING
     update_task(
@@ -22,15 +28,13 @@ def consume_task() -> Task | None:
         status=TaskStatus.PROCESSING.value
     )
 
-    print("Worker: Processing task")
-    print(task)
-
     try:
         handler = TASK_HANDLERS.get(task.type)
 
         if not handler:
             raise Exception(f"No handler found for task type: {task.type}")
 
+        log_event(task.task_id, f"Executing handler: {task.type}")
         handler(task)
 
         task.status = TaskStatus.DONE
@@ -39,11 +43,11 @@ def consume_task() -> Task | None:
             status=TaskStatus.DONE.value
         )
 
+        log_event(task.task_id, "Task completed successfully")
         metrics.task_processed()
-        print("Worker: Task completed")
 
     except Exception as e:
-        print(f"Worker: Task failed - {e}")
+        log_event(task.task_id, f"Task failed with error: {str(e)}")
 
         if task.retries_left > 0:
             task.retries_left -= 1
@@ -55,8 +59,13 @@ def consume_task() -> Task | None:
                 retries_left=task.retries_left
             )
 
+            retry_queue.schedule(task, delay_seconds=30)
+            log_event(
+                task.task_id,
+                f"Task scheduled for retry in 30s, retries left: {task.retries_left}"
+            )
+
             metrics.task_retried()
-            task_queue.enqueue(task)
 
         else:
             task.status = TaskStatus.FAILED
@@ -66,13 +75,18 @@ def consume_task() -> Task | None:
                 error=str(e)
             )
 
-            metrics.task_failed()
             dead_letter_queue.enqueue(task)
+            log_event(task.task_id, "Task moved to dead letter queue")
+
+            metrics.task_failed()
 
     return task
 
 
 def start_worker():
     print("Worker started. Waiting for tasks...")
+
     while True:
+        pull_retry_tasks()
         consume_task()
+        time.sleep(1)

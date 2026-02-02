@@ -1,8 +1,9 @@
 import time
+import json
 from app.models.task import TaskStatus
 from app.core.redis_client import get_redis_client
 
-redis_client = get_redis_client()  # singleton
+redis_client = get_redis_client()  
 
 def _task_key(task_id: str) -> str:
     return f"task:{task_id}"
@@ -33,3 +34,8 @@ def get_task(task_id: str):
         if field in data:
             data[field] = int(data[field])
     return data
+
+def get_task_logs(task_id: str):
+    key = f"task:logs:{task_id}"
+    logs = redis_client.lrange(key, 0, -1)  
+    return [json.loads(log) for log in logs]
