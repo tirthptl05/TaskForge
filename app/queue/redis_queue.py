@@ -9,10 +9,15 @@ class RedisQueue:
         self.redis = get_redis_client()
 
     def enqueue(self, task: Task):
+        print("📦 Enqueuing task into Redis queue:", self.name)
+        print("📦 Task data:", task.model_dump())
+
         self.redis.rpush(self.name, json.dumps(task.model_dump()))
 
+        print("📦 Queue size AFTER enqueue:", self.redis.llen(self.name))
+
     def dequeue(self):
-        result = self.redis.blpop(self.name)
+        result = self.redis.blpop(self.name,timeout=1)
 
         if result is None:
             return None
