@@ -9,6 +9,9 @@ from app.core.registry import task_queue
 from app.core.redis_client import redis
 from app.core.task_store import create_task
 from app.worker.worker import consume_task
+from fastapi import Depends
+from app.api.dependencies import verify_api_key
+
 
 
 class TaskRequest(BaseModel):
@@ -21,7 +24,7 @@ router = APIRouter()
 
 
 @router.post("/enqueue")
-def enqueue_task(task_request: TaskRequest):
+def enqueue_task(task_request: TaskRequest, api_key: str = Depends(verify_api_key)):
     
 
     task_id = str(uuid4())
