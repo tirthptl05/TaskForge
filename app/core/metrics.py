@@ -4,6 +4,15 @@ class Metrics:
     def __init__(self):
         self.redis = get_redis_client()
 
+    def task_processed(self):
+        self.redis.incr("metrics:processed:all")
+
+    def task_failed(self):
+        self.redis.incr("metrics:failed:all")
+
+    def task_retried(self):
+        self.redis.incr("metrics:retried:all")
+
     def get_metrics(self):
         return {
             "tasks": {
