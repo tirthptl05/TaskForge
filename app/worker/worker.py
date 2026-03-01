@@ -4,6 +4,9 @@ from app.handlers.handler_registry import TASK_HANDLERS
 from app.core.task_store import update_task
 from app.core.task_logger import log_event
 import time
+from dotenv import load_dotenv
+load_dotenv()
+
 
 
 def pull_retry_tasks():

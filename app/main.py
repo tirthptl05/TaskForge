@@ -3,6 +3,8 @@ from app.api.producer import router as producer_router
 from app.api.dlq import router as dlq_router
 from app.api.tasks import router as tasks_router
 from app.api.metrics_api import router as metrics_router
+from dotenv import load_dotenv
+load_dotenv()
 
 
 app = FastAPI(title="TaskForge")
