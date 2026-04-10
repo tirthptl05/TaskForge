@@ -94,4 +94,5 @@ def start_worker():
         consume_task()
         time.sleep(1)
 
-
+if __name__ == "__main__":
+    start_worker()
